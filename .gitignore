@@ -1,0 +1,13 @@
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Local configuration, database, and runtime output
+.env
+.vscode/
+database.db
+instance/
+*.log

@@ -4,15 +4,30 @@ import os
 import re
 import sqlite3
 from datetime import date, datetime
+from pathlib import Path
+from secrets import token_urlsafe
 import joblib
 import pandas as pd
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+BASE_DIR = Path(__file__).resolve().parent
+APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
+IS_PRODUCTION = APP_ENV == "production"
+SECRET_KEY = os.environ.get("SECRET_KEY") or os.environ.get("FLASK_SECRET_KEY")
+if IS_PRODUCTION and not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be set when APP_ENV=production.")
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "ai-smart-hospital-secret-key")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, "database.db")
+app.config.update(
+    # A generated fallback avoids committing a reusable secret; production always
+    # requires SECRET_KEY and therefore keeps session signing stable across workers.
+    SECRET_KEY=SECRET_KEY or token_urlsafe(32),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
+)
+DATABASE_PATH = BASE_DIR / "database.db"
 
 class DatabaseConnection(sqlite3.Connection):
     """Closes connections automatically after a with-block commits or rolls back."""
@@ -149,7 +164,7 @@ def doctor_availability_is_valid(availability, appointment_date, appointment_tim
     return True, ""
 
 try:
-    model = joblib.load(os.path.join(BASE_DIR, "model", "disease_model.pkl"))
+    model = joblib.load(BASE_DIR / "model" / "disease_model.pkl")
     MODEL_FEATURES = [feature for feature in model.feature_names_in_ if not feature.lower().startswith("unnamed:")]
     print(f"Disease model loaded successfully. Type: {type(model).__name__}; features: {len(MODEL_FEATURES)}; classes: {len(getattr(model, 'classes_', []))}.")
 except Exception as error:
@@ -157,7 +172,7 @@ except Exception as error:
     print(f"ERROR: Could not load disease model: {error}")
 if model is not None and not MODEL_FEATURES:
     try:
-        MODEL_FEATURES = list(pd.read_csv(os.path.join(BASE_DIR, "dataset", "Training.csv")).drop(columns=["prognosis"], errors="ignore").columns)
+        MODEL_FEATURES = list(pd.read_csv(BASE_DIR / "dataset" / "Training.csv").drop(columns=["prognosis"], errors="ignore").columns)
     except Exception as error:
         print(f"ERROR: Could not load model features: {error}")
 
@@ -559,4 +574,6 @@ def about(): return render_template("about.html")
 def contact(): return render_template("contact.html")
 
 init_db()
-if __name__ == "__main__": app.run(debug=True)
+if __name__ == "__main__":
+    debug = not IS_PRODUCTION and os.environ.get("FLASK_DEBUG", "1") == "1"
+    app.run(debug=debug)
