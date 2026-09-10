@@ -1,0 +1,220 @@
+.hero{
+
+min-height:90vh;
+
+display:flex;
+
+align-items:center;
+
+background:linear-gradient(to right,#f5fbff,#ffffff);
+
+padding-top:100px;
+
+}
+
+.hero h1{
+
+font-size:60px;
+
+font-weight:700;
+
+color:#0d6efd;
+
+line-height:1.2;
+
+}
+
+.hero h1 span{
+
+color:#198754;
+
+}
+
+.hero p{
+
+font-size:20px;
+
+margin-top:20px;
+
+margin-bottom:30px;
+
+color:#555;
+
+}
+
+.hero-image{
+
+width:100%;
+
+max-width:500px;
+
+animation:float 3s ease-in-out infinite;
+
+}
+
+.hero h2{
+
+font-weight:700;
+
+color:#0d6efd;
+
+}
+
+.hero .row .col-4{
+
+text-align:center;
+
+}
+
+@keyframes float{
+
+0%{
+
+transform:translateY(0);
+
+}
+
+50%{
+
+transform:translateY(-15px);
+
+}
+
+100%{
+
+transform:translateY(0);
+
+}
+
+}
+<!-- About Section Start -->
+
+<section id="about" class="about py-5">
+
+<div class="container">
+
+<div class="row align-items-center">
+
+<div class="col-lg-6">
+
+<img src="../static/images/about.png"
+class="img-fluid rounded shadow">
+
+</div>
+
+<div class="col-lg-6">
+
+<h5 class="text-success">
+ABOUT US
+</h5>
+
+<h2 class="fw-bold mt-3">
+
+Smart Healthcare
+Powered by Machine Learning
+
+</h2>
+
+<p class="mt-4">
+
+Our Smart Disease Prediction System uses Machine Learning
+algorithms to help patients identify possible diseases
+based on symptoms and guide them to the appropriate
+hospital department.
+
+</p>
+
+<p>
+
+✔ Fast Disease Prediction<br>
+✔ Reliable ML Models<br>
+✔ Secure Patient Records<br>
+✔ Easy Appointment Guidance
+
+</p>
+
+<a href="#" class="btn btn-primary mt-3">
+
+Read More
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- About Section End -->
+.about{
+background:#fff;
+padding:80px 0;
+}
+
+.about img{
+border-radius:20px;
+}
+
+.card{
+border:none;
+border-radius:20px;
+transition:.4s;
+}
+
+.card:hover{
+transform:translateY(-10px);
+}
+
+section h2{
+font-weight:700;
+color:#0d6efd;
+}
+
+section p{
+color:#666;
+}
+/* Workflow */
+
+.bg-light{
+background:#f8fbff !important;
+}
+
+/* Doctor Cards */
+
+.card{
+transition:.4s;
+border-radius:18px;
+}
+
+.card:hover{
+
+transform:translateY(-8px);
+
+box-shadow:0px 15px 30px rgba(0,0,0,.15);
+
+}
+
+/* Contact */
+
+input,
+textarea{
+
+border-radius:12px !important;
+
+}
+
+/* Footer */
+
+footer{
+
+margin-top:0;
+
+}
+
+footer h4{
+
+margin-bottom:15px;
+
+}
