@@ -23,6 +23,7 @@ import joblib
 import pandas as pd
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+from database_config import configured_database_path
 
 BASE_DIR = Path(__file__).resolve().parent
 APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
@@ -54,14 +55,7 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
 )
-_configured_database_path = os.environ.get("DATABASE_PATH", "").strip()
-if IS_PRODUCTION and not _configured_database_path:
-    raise RuntimeError("DATABASE_PATH must point to the existing SQLite file on persistent storage in production.")
-if IS_PRODUCTION and not Path(_configured_database_path).expanduser().is_absolute():
-    raise RuntimeError("DATABASE_PATH must be an absolute path in production.")
-DATABASE_PATH = Path(_configured_database_path).expanduser().resolve() if _configured_database_path else BASE_DIR / "database.db"
-if IS_PRODUCTION and not DATABASE_PATH.is_file():
-    raise RuntimeError("The configured production SQLite database file does not exist; refusing to create an empty database.")
+DATABASE_PATH = configured_database_path(APP_ENV)
 
 class DatabaseConnection(sqlite3.Connection):
     """Closes connections automatically after a with-block commits or rolls back."""
