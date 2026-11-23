@@ -1,0 +1,6 @@
+<div class="d-flex justify-content-end gap-2 align-items-center small my-2" aria-label="Language">
+  <span>{{ tr('Language') }}:</span>
+  <a href="{{ url_for('set_language', language='en', next=request.path) }}" lang="en">English</a>
+  <span aria-hidden="true">|</span>
+  <a href="{{ url_for('set_language', language='te', next=request.path) }}" lang="te">తెలుగు</a>
+</div>

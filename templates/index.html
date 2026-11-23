@@ -38,6 +38,7 @@ href="{{ url_for('static', filename='css/home.css') }}">
 </head>
 
 <body>
+{% include '_language_switch.html' %}
 
 <!-- Navbar -->
 
@@ -169,6 +170,18 @@ Doctor Portal
 href="{{ url_for('doctor_register') }}">
 
 Doctor Registration
+
+</a>
+
+</li>
+
+<li class="nav-item">
+
+<a class="btn btn-warning fw-semibold ms-2"
+href="{{ url_for('admin_login') }}">
+
+<i class="fa-solid fa-shield-halved me-1" aria-hidden="true"></i>
+Admin Portal
 
 </a>
 
@@ -724,6 +737,8 @@ Send Message
 <div class="container">
 
 <h4>AI Smart Hospital Assistant</h4>
+
+<p><a class="text-white" href="{{ url_for('admin_login') }}">Administrator sign in</a></p>
 
 <p>
 

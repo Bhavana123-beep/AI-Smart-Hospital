@@ -4,10 +4,28 @@ venv/
 __pycache__/
 **/__pycache__/
 *.pyc
+*.pyo
 
 # Local configuration, database, and runtime output
 .env
+.env.*
 .vscode/
-database.db
 instance/
 *.log
+
+# SQLite files and sidecars (including temporary test copies)
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+
+# Local credentials and private key material
+*password*
+*credential*
+*secret*
+*.pem
+*.key
+*.p12
+*.pfx

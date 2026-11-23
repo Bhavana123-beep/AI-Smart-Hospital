@@ -1,0 +1,150 @@
+<form class="row g-2 align-items-end mb-3" data-hospital-search data-api-url="{{ url_for('hospital_search_api') }}" data-department="{{ hospital_department or '' }}" data-fallback-url="{{ hospital_search_url or '' }}">
+  <div class="col-sm-8"><label class="form-label" for="hospital-location">{{ tr('City or location') }}</label><input class="form-control" id="hospital-location" name="location" value="{{ hospital_location or '' }}" maxlength="120" autocomplete="off" placeholder="{{ tr('Enter a city or nearby area') }}" required></div>
+  <div class="col-sm-auto"><button class="btn btn-outline-primary" type="submit">{{ tr('Search Other Hospitals') }}</button></div>
+  {% if request.path == url_for('book_appointment') and selected_doctor %}<input type="hidden" name="doctor_id" value="{{ selected_doctor.id }}">{% if selected_date %}<input type="hidden" name="date" value="{{ selected_date }}">{% endif %}{% endif %}
+</form>
+<div class="d-flex gap-2 align-items-center mb-3" data-hospital-loading hidden role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>{{ tr('Searching OpenStreetMap for hospitals…') }}</span></div>
+<div class="alert alert-danger" data-hospital-error hidden role="alert"><span data-hospital-error-text></span> <button class="btn btn-sm btn-outline-danger ms-2" type="button" data-hospital-retry>{{ tr('Retry') }}</button></div>
+<div class="alert alert-secondary" data-hospital-empty hidden role="status"></div>
+<div class="mb-3" data-hospital-filters hidden><label class="form-label" for="hospital-filter">{{ tr('Filter results by hospital name or location') }}</label><input class="form-control" id="hospital-filter" type="search" maxlength="120" placeholder="{{ tr('Filter hospitals') }}"></div>
+<div class="row g-3" data-hospital-results aria-live="polite"></div>
+<p class="small text-muted mt-3 mb-2">{{ tr('External OpenStreetMap results are independently sourced and are not verified by this application. Data © OpenStreetMap contributors, available under the Open Database License (ODbL).') }} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">{{ tr('OpenStreetMap attribution') }}</a></p>
+<a class="btn btn-outline-secondary" data-hospital-fallback href="{{ hospital_search_url or '#' }}" target="_blank" rel="noopener noreferrer" {% if not hospital_search_url %}hidden{% endif %}>{{ tr('Search hospitals near this location on Google Maps') }}</a>
+<script>
+(() => {
+  const form = document.querySelector('[data-hospital-search]');
+  if (!form || form.dataset.initialized) return;
+  form.dataset.initialized = 'true';
+  const input = form.elements.location;
+  const results = document.querySelector('[data-hospital-results]');
+  const loading = document.querySelector('[data-hospital-loading]');
+  const error = document.querySelector('[data-hospital-error]');
+  const errorText = document.querySelector('[data-hospital-error-text]');
+  const empty = document.querySelector('[data-hospital-empty]');
+  const filters = document.querySelector('[data-hospital-filters]');
+  const filterInput = document.querySelector('#hospital-filter');
+  const fallback = document.querySelector('[data-hospital-fallback]');
+  let pendingLocation = '';
+  let controller;
+  const setLoading = (active) => {
+    loading.hidden = !active;
+    if (active) form.setAttribute('aria-busy', 'true');
+    else form.removeAttribute('aria-busy');
+  };
+
+  const addText = (parent, tag, value, className) => {
+    if (!value) return;
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    node.textContent = value;
+    parent.appendChild(node);
+  };
+  const safeHttpUrl = (value) => {
+    try {
+      const parsed = new URL(value);
+      return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+    } catch (_) { return ''; }
+  };
+  const updateCards = () => {
+    const term = (filterInput.value || '').trim().toLocaleLowerCase();
+    for (const card of results.children) {
+      card.hidden = Boolean(term && !card.dataset.filterText.includes(term));
+    }
+    if (results.children.length && [...results.children].every(card => card.hidden)) {
+      empty.hidden = false;
+      empty.textContent = {{ tr('No hospitals match that filter. Try a different name or location.')|tojson }};
+    } else if (results.children.length) empty.hidden = true;
+  };
+  const renderHospitals = (payload) => {
+    results.replaceChildren();
+    for (const hospital of payload.hospitals || []) {
+      const col = document.createElement('div');
+      col.className = 'col-12 col-md-6';
+      const card = document.createElement('article');
+      card.className = 'card h-100 shadow-sm hospital-result-card';
+      card.dataset.filterText = `${hospital.name || ''} ${hospital.address || ''}`.toLocaleLowerCase();
+      const body = document.createElement('div');
+      body.className = 'card-body d-flex flex-column';
+      addText(body, 'h3', hospital.name, 'h5 card-title');
+      addText(body, 'p', hospital.address, 'mb-2');
+      const details = document.createElement('dl');
+      details.className = 'row small mb-3';
+      const detail = (label, value) => {
+        if (!value) return;
+        addText(details, 'dt', label, 'col-5 text-muted');
+        addText(details, 'dd', value, 'col-7 mb-1');
+      };
+      detail({{ tr('Distance')|tojson }}, Number.isFinite(hospital.distance_km) ? `${hospital.distance_km} km (approx.)` : '');
+      detail({{ tr('Phone')|tojson }}, hospital.phone || '');
+      detail({{ tr('Hospital type')|tojson }}, hospital.type || '');
+      body.appendChild(details);
+      if (hospital.specialty_match) addText(body, 'p', {{ tr('OpenStreetMap includes a specialty tag matching the predicted department.')|tojson }}, 'small text-success');
+      if (hospital.website && safeHttpUrl(hospital.website)) {
+        const website = document.createElement('a');
+        website.href = safeHttpUrl(hospital.website);
+        website.target = '_blank'; website.rel = 'noopener noreferrer';
+        website.textContent = {{ tr('Visit website')|tojson }};
+        website.className = 'mb-3'; body.appendChild(website);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'd-flex flex-wrap gap-2 mt-auto';
+      const coord = `${hospital.lat},${hospital.lon}`;
+      const addLink = (label, href, css) => {
+        const a = document.createElement('a'); a.className = css; a.href = href;
+        a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label; actions.appendChild(a);
+      };
+      addLink({{ tr('View on Google Maps')|tojson }}, `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coord)}`, 'btn btn-sm btn-outline-primary');
+      addLink({{ tr('Get Directions')|tojson }}, `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coord)}&travelmode=driving`, 'btn btn-sm btn-primary');
+      if (hospital.osm_url && safeHttpUrl(hospital.osm_url)) addLink({{ tr('View OpenStreetMap record')|tojson }}, safeHttpUrl(hospital.osm_url), 'btn btn-sm btn-outline-secondary');
+      body.appendChild(actions); card.appendChild(body); col.appendChild(card); results.appendChild(col);
+    }
+    const count = (payload.hospitals || []).length;
+    filters.hidden = count === 0;
+    if (!count) {
+      setLoading(false);
+      empty.hidden = false;
+      empty.textContent = {{ tr('No hospitals were found inside the mapped city boundary in OpenStreetMap. Try another city or use the Google Maps search below.')|tojson }};
+    } else {
+      empty.hidden = true;
+      addText(empty, 'span', `${count} {{ tr('hospital results from OpenStreetMap; details may be incomplete.') }}`);
+    }
+  };
+  const search = async () => {
+    const location = input.value.trim();
+    if (!location) { input.focus(); input.reportValidity(); return; }
+    pendingLocation = location;
+    const fallbackUrl = new URL('https://www.google.com/maps/search/');
+    fallbackUrl.searchParams.set('api', '1');
+    fallbackUrl.searchParams.set('query', `hospitals near ${location}`);
+    fallback.href = fallbackUrl.href; fallback.hidden = false;
+    setLoading(true); error.hidden = true; empty.hidden = true; results.replaceChildren(); filters.hidden = true;
+    if (controller) controller.abort();
+    const searchController = new AbortController();
+    controller = searchController;
+    try {
+      const url = new URL(form.dataset.apiUrl, window.location.origin);
+      url.searchParams.set('location', location);
+      if (form.dataset.department) url.searchParams.set('department', form.dataset.department);
+      const response = await fetch(url, {headers: {'Accept':'application/json'}, signal: searchController.signal});
+      const payload = await response.json();
+      if (controller !== searchController) return;
+      if (!response.ok) throw new Error(payload.error || {{ tr('Hospital search failed. Please retry.')|tojson }});
+      renderHospitals(payload);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (controller === searchController) {
+        errorText.textContent = err.message || {{ tr('Hospital search failed. Please retry.')|tojson }};
+        error.hidden = false;
+        empty.hidden = false;
+        empty.textContent = {{ tr('You can retry or use the external Google Maps search link.')|tojson }};
+        setLoading(false);
+      }
+    } finally { if (controller === searchController) setLoading(false); }
+  };
+  form.addEventListener('submit', (event) => { event.preventDefault(); search(); });
+  document.querySelector('[data-hospital-retry]').addEventListener('click', search);
+  filterInput.addEventListener('input', updateCards);
+  if (input.value.trim()) search();
+})();
+</script>
+<style>.hospital-result-card{border-color:#e1e7ef}.hospital-result-card:hover{border-color:#9bbce8;box-shadow:0 .35rem 1rem rgba(20,50,90,.10)!important}</style>

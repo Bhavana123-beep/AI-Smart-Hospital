@@ -33,7 +33,8 @@ margin-bottom:40px;
 
 }
 
-.sidebar a{
+.sidebar a,
+.sidebar-logout{
 
 display:block;
 
@@ -51,7 +52,17 @@ transition:.3s;
 
 }
 
-.sidebar a:hover{
+.sidebar-logout{
+width:100%;
+background:transparent;
+border:0;
+font:inherit;
+text-align:left;
+cursor:pointer;
+}
+
+.sidebar a:hover,
+.sidebar-logout:hover{
 
 background:white;
 
